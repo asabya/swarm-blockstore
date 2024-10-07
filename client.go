@@ -12,7 +12,7 @@ import (
 type Client interface {
 	CheckConnection() bool
 	UploadSOC(owner, id, signature, stamp, redundancyLevel string, pin bool, data []byte) (address swarm.Address, err error)
-	UploadChunk(ch swarm.Chunk, stamp, redundancyLevel string, pin bool) (address swarm.Address, err error)
+	UploadChunk(tag uint32, ch swarm.Chunk, stamp, redundancyLevel string, pin bool) (address swarm.Address, err error)
 	UploadBlob(tag uint32, stamp, redundancyLevel string, pin, encrypt bool, data io.Reader) (address swarm.Address, err error)
 	UploadFileBzz(data []byte, fileName, stamp, redundancyLevel string, pin bool) (address swarm.Address, err error)
 	UploadBzz(data *tar.Stream, stamp, redundancyLevel string, pin bool) (address swarm.Address, err error)

@@ -43,6 +43,7 @@ type Client struct {
 	isProxy    bool
 	stamp      string
 	redundancy string
+	pin        bool
 }
 
 type bytesPostResponse struct {
@@ -67,6 +68,12 @@ type beeError struct {
 }
 
 type Option func(client *Client)
+
+func WithPinning(pin bool) Option {
+	return func(c *Client) {
+		c.pin = pin
+	}
+}
 
 func WithStamp(stamp string) Option {
 	return func(c *Client) {
@@ -170,7 +177,9 @@ func (s *Client) UploadSOC(owner, id, signature, stamp, redundancyLevel string, 
 	req.Header.Set(contentTypeHeader, "application/octet-stream")
 	req.Header.Set(swarmDeferredUploadHeader, "true")
 	req.Header.Set(swarmErasureCodingHeader, redundancyLevel)
-
+	if s.pin {
+		pin = s.pin
+	}
 	if pin {
 		req.Header.Set(swarmPinHeader, "true")
 	}
@@ -223,7 +232,9 @@ func (s *Client) UploadChunk(tag uint32, ch swarm.Chunk, stamp, redundancyLevel 
 	req.Header.Set(swarmDeferredUploadHeader, "true")
 	req.Header.Set(swarmErasureCodingHeader, redundancyLevel)
 	req.Header.Set(swarmTagHeader, fmt.Sprintf("%d", tag))
-
+	if s.pin {
+		pin = s.pin
+	}
 	if pin {
 		req.Header.Set(swarmPinHeader, "true")
 	}
@@ -634,6 +645,9 @@ func (s *Client) CreateFeedManifest(owner, topic, stamp string, pin bool) (swarm
 		stamp = s.stamp
 	}
 	req.Header.Set(SwarmPostageBatchId, stamp)
+	if s.pin {
+		pin = s.pin
+	}
 	if pin {
 		req.Header.Set(swarmPinHeader, "true")
 	}

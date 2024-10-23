@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/asabya/swarm-blockstore/tar"
 	"io"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"time"
+
+	"github.com/asabya/swarm-blockstore/tar"
 
 	"github.com/ethersphere/bee/v2/pkg/file/redundancy"
 	"github.com/ethersphere/bee/v2/pkg/swarm"
@@ -520,34 +522,40 @@ func (s *Client) DownloadBzz(address swarm.Address) ([]byte, int, error) {
 }
 
 // DownloadFileBzz downloads file at bzz collection from the Swarm network.
-func (s *Client) DownloadFileBzz(address swarm.Address, filename string) (io.ReadCloser, error) {
+func (s *Client) DownloadFileBzz(address swarm.Address, filename string) (io.ReadCloser, uint64, error) {
 
 	fullUrl := s.url + filepath.ToSlash(filepath.Join(bzzUrl, address.String(), filename))
 	req, err := http.NewRequest(http.MethodGet, fullUrl, http.NoBody)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	req.Close = true
 
 	response, err := s.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if response.StatusCode != http.StatusOK {
 		respData, err := io.ReadAll(response.Body)
 		if err != nil {
-			return nil, errors.New("error downloading bzz")
+			return nil, 0, errors.New("error downloading bzz")
 		}
 
 		var beeErr *beeError
 		err = json.Unmarshal(respData, &beeErr)
 		if err != nil {
-			return nil, errors.New(string(respData))
+			return nil, 0, errors.New(string(respData))
 		}
-		return nil, errors.New(beeErr.Message)
+		return nil, 0, errors.New(beeErr.Message)
 	}
-	return response.Body, nil
+
+	len, err := strconv.ParseUint(response.Header.Get("Content-Length"), 10, 64)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return response.Body, len, nil
 }
 
 // DeleteReference unpins a reference so that it will be garbage collected by the Swarm network.

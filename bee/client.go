@@ -550,12 +550,12 @@ func (s *Client) DownloadFileBzz(address swarm.Address, filename string) (io.Rea
 		return nil, 0, errors.New(beeErr.Message)
 	}
 
-	len, err := strconv.ParseUint(response.Header.Get("Content-Length"), 10, 64)
+	contentLength, err := strconv.ParseUint(response.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return response.Body, len, nil
+	return response.Body, contentLength, nil
 }
 
 // DeleteReference unpins a reference so that it will be garbage collected by the Swarm network.

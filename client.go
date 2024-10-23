@@ -19,7 +19,7 @@ type Client interface {
 	DownloadChunk(ctx context.Context, address swarm.Address) (chunk swarm.Chunk, err error)
 	DownloadBlob(address swarm.Address) (data io.ReadCloser, respCode int, err error)
 	DownloadBzz(address swarm.Address) ([]byte, int, error)
-	DownloadFileBzz(address swarm.Address, filename string) (data io.ReadCloser, uint64, err error)
+	DownloadFileBzz(address swarm.Address, filename string) (data io.ReadCloser, contentLength uint64, err error)
 	DeleteReference(address swarm.Address) error
 	CreateTag(address swarm.Address) (uint32, error)
 	GetTag(tag uint32) (int64, int64, int64, error)

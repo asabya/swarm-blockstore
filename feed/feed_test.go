@@ -1,4 +1,4 @@
-package swarm_feed
+package swarm_feed_test
 
 import (
 	"testing"

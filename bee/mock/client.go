@@ -27,14 +27,12 @@ import (
 	mockbatchstore "github.com/ethersphere/bee/v2/pkg/postage/batchstore/mock"
 	mockpost "github.com/ethersphere/bee/v2/pkg/postage/mock"
 	"github.com/ethersphere/bee/v2/pkg/postage/postagecontract"
-	contractMock "github.com/ethersphere/bee/v2/pkg/postage/postagecontract/mock"
 	"github.com/ethersphere/bee/v2/pkg/pss"
 	"github.com/ethersphere/bee/v2/pkg/pusher"
 	"github.com/ethersphere/bee/v2/pkg/resolver"
 	resolverMock "github.com/ethersphere/bee/v2/pkg/resolver/mock"
 	"github.com/ethersphere/bee/v2/pkg/settlement/pseudosettle"
 	chequebookmock "github.com/ethersphere/bee/v2/pkg/settlement/swap/chequebook/mock"
-	"github.com/ethersphere/bee/v2/pkg/settlement/swap/erc20"
 	erc20mock "github.com/ethersphere/bee/v2/pkg/settlement/swap/erc20/mock"
 	swapmock "github.com/ethersphere/bee/v2/pkg/settlement/swap/mock"
 	statestore "github.com/ethersphere/bee/v2/pkg/statestore/mock"
@@ -42,16 +40,12 @@ import (
 	"github.com/ethersphere/bee/v2/pkg/steward"
 	"github.com/ethersphere/bee/v2/pkg/storage"
 	"github.com/ethersphere/bee/v2/pkg/storage/inmemstore"
-	"github.com/ethersphere/bee/v2/pkg/storageincentives"
 	"github.com/ethersphere/bee/v2/pkg/storageincentives/redistribution"
 	"github.com/ethersphere/bee/v2/pkg/storageincentives/staking"
-	mock2 "github.com/ethersphere/bee/v2/pkg/storageincentives/staking/mock"
-	mockstorer "github.com/ethersphere/bee/v2/pkg/storer/mock"
 	"github.com/ethersphere/bee/v2/pkg/swarm"
 	"github.com/ethersphere/bee/v2/pkg/topology/lightnode"
 	topologymock "github.com/ethersphere/bee/v2/pkg/topology/mock"
 	"github.com/ethersphere/bee/v2/pkg/tracing"
-	"github.com/ethersphere/bee/v2/pkg/transaction"
 	"github.com/ethersphere/bee/v2/pkg/transaction/backendmock"
 	transactionmock "github.com/ethersphere/bee/v2/pkg/transaction/mock"
 	"github.com/ethersphere/bee/v2/pkg/util/testutil"
@@ -105,13 +99,12 @@ type TestServerOptions struct {
 	BatchStore postage.Storer
 	SyncStatus func() (bool, error)
 
-	BackendOpts         []backendmock.Option
-	Erc20Opts           []erc20mock.Option
-	BeeMode             api.BeeNodeMode
-	RedistributionAgent *storageincentives.Agent
-	NodeStatus          *status.Service
-	PinIntegrity        api.PinIntegrity
-	WhitelistedAddr     string
+	BackendOpts     []backendmock.Option
+	Erc20Opts       []erc20mock.Option
+	BeeMode         api.BeeNodeMode
+	NodeStatus      *status.Service
+	PinIntegrity    api.PinIntegrity
+	WhitelistedAddr string
 }
 
 func NewTestBeeServer(t *testing.T, o TestServerOptions) string {
@@ -195,12 +188,6 @@ func NewTestBeeServer(t *testing.T, o TestServerOptions) string {
 
 	s.SetP2P(o.P2P)
 
-	if o.RedistributionAgent == nil {
-		o.RedistributionAgent, _ = createRedistributionAgentService(t, o.Overlay, o.StateStorer, erc20, transaction, backend, o.BatchStore)
-		s.SetRedistributionAgent(o.RedistributionAgent)
-	}
-	testutil.CleanupCloser(t, o.RedistributionAgent)
-
 	s.SetSwarmAddress(&o.Overlay)
 	s.SetProbe(o.Probe)
 
@@ -226,49 +213,6 @@ func NewTestBeeServer(t *testing.T, o TestServerOptions) string {
 	ts := httptest.NewServer(s)
 	t.Cleanup(ts.Close)
 	return ts.URL
-}
-
-func createRedistributionAgentService(
-	t *testing.T,
-	addr swarm.Address,
-	storer storage.StateStorer,
-	erc20Service erc20.Service,
-	tranService transaction.Service,
-	backend storageincentives.ChainBackend,
-	chainStateGetter postage.ChainStateGetter,
-) (*storageincentives.Agent, error) {
-	t.Helper()
-
-	const blocksPerRound uint64 = 12
-	const blocksPerPhase uint64 = 4
-	postageContract := contractMock.New(contractMock.WithExpiresBatchesFunc(func(context.Context) error {
-		return nil
-	}),
-	)
-	stakingContract := mock2.New(mock2.WithIsFrozen(func(context.Context, uint64) (bool, error) {
-		return true, nil
-	}))
-	contract := &mockContract{}
-
-	return storageincentives.New(
-		addr,
-		common.Address{},
-		backend,
-		contract,
-		postageContract,
-		stakingContract,
-		mockstorer.NewReserve(),
-		func() bool { return true },
-		time.Millisecond*10,
-		blocksPerRound,
-		blocksPerPhase,
-		storer,
-		chainStateGetter,
-		erc20Service,
-		tranService,
-		&mockHealth{},
-		log.Noop,
-	)
 }
 
 type contractCall int
